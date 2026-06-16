@@ -135,7 +135,17 @@ function createBot() {
             initialPlayers.clear();
         }, 5000);
 
-        console.log('[BOT] Bot online. Modalità AFK passiva abilitata.');
+        // Anti-AFK - Salta ogni 2 minuti per evitare il kick
+        if (afkInterval) clearInterval(afkInterval);
+        afkInterval = setInterval(() => {
+            if (bot && bot.entity) {
+                bot.setControlState('jump', true);
+                setTimeout(() => {
+                    if (bot && bot.entity) bot.setControlState('jump', false);
+                }, 500);
+                console.log('[BOT] Anti-AFK check.');
+            }
+        }, 120000);
     });
 
     bot.on('playerJoined', (player) => {
