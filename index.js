@@ -1,8 +1,20 @@
 const mineflayer = require('mineflayer');
 const express = require('express');
+const cors = require('cors');
 const app = express();
 
+// Middleware CORS - IMPORTANTE per le richieste dal browser
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    optionsSuccessStatus: 200
+}));
+
 app.use(express.json());
+
+// Gestione esplicita preflight requests
+app.options('*', cors());
 
 // Configurazione fissa per il tuo server
 const config = {
@@ -304,9 +316,11 @@ process.on('SIGINT', () => {
 });
 
 // Avvio server API
-app.listen(API_PORT, () => {
+app.listen(API_PORT, '0.0.0.0', () => {
     addLog(`🌐 API Server avviato su porta ${API_PORT}`);
     addLog(`📌 Usa token: Bearer ${API_TOKEN}`);
+    addLog(`🔗 Accesso: http://localhost:${API_PORT}`);
+    addLog(`⚠️ CORS abilitato per tutte le origini`);
 });
 
 addLog('🤖 Avvio bot 24/7...');
