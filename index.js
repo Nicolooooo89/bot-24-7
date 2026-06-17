@@ -6,16 +6,22 @@ app.use(express.json());
 
 // Configurazione fissa per il tuo server
 const config = {
-    host: 'fuocosmp.falix.gg',
-    port: 25565,
-    username: 'FuocoBot24h',
-    version: '1.21.11',
-    password: 'Miapassword123'
+    host: process.env.MC_HOST || 'fuocosmp.falix.gg',
+    port: parseInt(process.env.MC_PORT || '25565'),
+    username: process.env.MC_USERNAME || 'FuocoBot24h',
+    version: process.env.MC_VERSION || '1.21.11',
+    password: process.env.MC_PASSWORD
 };
+if (!config.password) {
+    throw new Error('MC_PASSWORD environment variable is required');
+}
 
-// Configurazione API (modifica il token per sicurezza!)
-const API_TOKEN = process.env.API_TOKEN || 'tu0_t0k3n_s3gr3t0';
-const API_PORT = process.env.PORT || 3000;
+// Configurazione API
+const API_TOKEN = process.env.API_TOKEN;
+if (!API_TOKEN) {
+    throw new Error('API_TOKEN environment variable is required');
+}
+const API_PORT = process.env.PORT || 8080;
 
 let bot = null;
 let afkInterval = null;
