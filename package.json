@@ -1,12 +1,13 @@
 {
   "name": "fuocosmp-bot",
   "version": "1.0.0",
-  "description": "Bot 24/7 per FuocoSMP",
+  "description": "Bot 24/7 per FuocoSMP con API di controllo remoto",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.24.0"
+    "mineflayer": "^4.24.0",
+    "express": "^4.18.2"
   }
 }

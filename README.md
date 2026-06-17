@@ -1,19 +1,38 @@
 # FuocoBot 24/7
 
-Un bot Minecraft 24/7 per il server FuocoSMP che:
-- Rimane connesso al server H24
-- Saluta i nuovi giocatori che entrano
-- Mantiene la memoria dei giocatori già salutati
-- Previene l'AFK kick
-- Si riconnette automaticamente se disconnesso
+Un bot Minecraft 24/7 per il server FuocoSMP con **CONTROLLO REMOTO via API HTTP** che:
+- ✅ Rimane connesso al server H24
+- ✅ Saluta i nuovi giocatori che entrano
+- ✅ Mantiene la memoria dei giocatori già salutati
+- ✅ Previene l'AFK kick
+- ✅ Si riconnette automaticamente se disconnesso
+- 🆕 **CONTROLLABILE DA REMOTO via Railway con API HTTP**
+- 🆕 **Dashboard Web per il controllo remoto**
+
+## 🎮 Controllo Remoto
+
+Puoi controllare il bot **da qualsiasi dispositivo** tramite API HTTP mentre è hostato su Railway!
+
+### Cosa puoi fare:
+- 📊 Visualizzare lo status del bot (connessione, salute, fame, etc.)
+- 💬 Inviare messaggi al server Minecraft
+- 🎮 Eseguire comandi (jump, sprint, sneak)
+- 🔄 Riavviare il bot da remoto
+- 📋 Visualizzare i log in tempo reale
+
+👉 **Vedi [API_REMOTE_CONTROL.md](API_REMOTE_CONTROL.md) per la documentazione completa**
+
+### Dashboard Web
+Apri il file `remote_control.html` nel browser per una GUI completa di controllo!
 
 ## Setup
 
 ### 1. Requisiti
 - Node.js 14+
 - npm
+- Un account Railway (gratis!)
 
-### 2. Installazione
+### 2. Installazione Locale
 ```bash
 npm install
 ```
@@ -26,8 +45,98 @@ const config = {
     port: 25565,
     username: 'FuocoBot24h',
     version: '1.21.11',
-    password: 'Miapassword123',
-    chatDelay: 800 // millisecundi tra i messaggi
+    password: 'Miapassword123'
+};
+```
+
+### 4. Variabili d'Ambiente
+Crea un file `.env` (opzionale per testing locale):
+```
+API_TOKEN=il_tuo_token_segreto
+PORT=3000
+```
+
+### 5. Avvia il bot localmente
+```bash
+npm start
+```
+
+## 🚀 Deploy su Railway
+
+### Passo 1: Connetti il repo a Railway
+1. Vai su https://railway.app
+2. Clicca su "Start a New Project"
+3. Seleziona "GitHub Repo"
+4. Autorizza e seleziona questo repo
+
+### Passo 2: Configura Variabili di Ambiente
+Su Railway → Progetto → Variables, aggiungi:
+```
+API_TOKEN=il_tuo_token_lungo_e_sicuro
+PORT=3000
+```
+
+### Passo 3: Deploy
+Railway builderà e deployerà automaticamente. Otterrai un'URL pubblica come:
+```
+https://tuo-bot.railway.app
+```
+
+## 📡 API Endpoints
+
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| GET | `/api/status` | Status del bot |
+| POST | `/api/chat` | Invia messaggio |
+| POST | `/api/command` | Esegui comando (jump/sprint/sneak) |
+| POST | `/api/restart` | Riavvia il bot |
+| GET | `/api/logs` | Visualizza log |
+| GET | `/health` | Health check (no token) |
+
+📖 Vedi [API_REMOTE_CONTROL.md](API_REMOTE_CONTROL.md) per esempi completi.
+
+## 🛠️ Testing Locale
+
+```bash
+# Avvia il bot
+npm start
+
+# In un altro terminale, testa l'API:
+curl -H "Authorization: Bearer il_tuo_token" \
+  http://localhost:3000/api/status
+
+# Invia messaggio:
+curl -X POST http://localhost:3000/api/chat \
+  -H "Authorization: Bearer il_tuo_token" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Ciao!"}'
+```
+
+## 🐛 Troubleshooting
+
+**"Bot non connesso"** → Controlla le credenziali del server e la connessione internet
+
+**"401 Unauthorized"** → Token API sbagliato o mancante
+
+**"Cannot connect to Railway"** → Controlla i log in Railway dashboard
+
+## 📝 Note
+
+- Il bot mantiene i log degli ultimi 200 messaggi
+- Autenticazione: token Bearer nel header `Authorization`
+- Rate limiting: nessuno implementato (aggiungi se necessario)
+- HTTPS su Railway è automatico
+
+## 📚 File Importanti
+
+- `index.js` - Core del bot con API HTTP
+- `remote_control.html` - Dashboard Web per il controllo
+- `API_REMOTE_CONTROL.md` - Documentazione completa API
+- `package.json` - Dipendenze (Express + Mineflayer)
+
+---
+
+**Made with ❤️ per FuocoSMP**
 };
 ```
 

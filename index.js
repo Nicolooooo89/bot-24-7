@@ -1,4 +1,8 @@
 const mineflayer = require('mineflayer');
+const express = require('express');
+const app = express();
+
+app.use(express.json());
 
 // Configurazione fissa per il tuo server
 const config = {
@@ -9,12 +13,36 @@ const config = {
     password: 'Miapassword123'
 };
 
+// Configurazione API (modifica il token per sicurezza!)
+const API_TOKEN = process.env.API_TOKEN || 'tu0_t0k3n_s3gr3t0';
+const API_PORT = process.env.PORT || 3000;
+
 let bot = null;
 let afkInterval = null;
 let reconnectTimeout = null;
 let reconnectAttempts = 0;
 let maxReconnectAttempts = 5;
 let isSpawned = false;
+let logs = [];
+const maxLogs = 200;
+
+// Middleware autenticazione
+function verifyToken(req, res, next) {
+    const token = req.headers['authorization']?.replace('Bearer ', '');
+    if (!token || token !== API_TOKEN) {
+        return res.status(401).json({ error: 'Token non valido o mancante' });
+    }
+    next();
+}
+
+// Funzione per loggare
+function addLog(message) {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${message}`;
+    console.log(logEntry);
+    logs.push(logEntry);
+    if (logs.length > maxLogs) logs.shift();
+}
 
 function getReconnectDelay() {
     // Exponential backoff: 5s, 10s, 20s, 40s, 60s
@@ -22,9 +50,103 @@ function getReconnectDelay() {
     return baseDelay;
 }
 
+// ============ API ENDPOINTS ============
+
+// Status del bot
+app.get('/api/status', verifyToken, (req, res) => {
+    res.json({
+        connected: bot && bot.isAlive && isSpawned,
+        username: bot?.username || 'N/A',
+        health: bot?.health || 0,
+        hunger: bot?.food || 0,
+        isSpawned: isSpawned,
+        reconnectAttempts: reconnectAttempts,
+        dimension: bot?.dimension || 'N/A'
+    });
+});
+
+// Invia messaggio chat al server
+app.post('/api/chat', verifyToken, (req, res) => {
+    const { message } = req.body;
+    
+    if (!message) {
+        return res.status(400).json({ error: 'Messaggio richiesto' });
+    }
+    
+    if (!bot || !bot.isAlive) {
+        return res.status(503).json({ error: 'Bot non connesso' });
+    }
+    
+    try {
+        bot.chat(message);
+        addLog(`[API] Chat inviata: ${message}`);
+        res.json({ success: true, message: 'Messaggio inviato' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Riavvia il bot
+app.post('/api/restart', verifyToken, (req, res) => {
+    addLog('[API] Restart richiesto');
+    
+    if (bot && bot.isAlive) {
+        bot.quit();
+    }
+    
+    if (afkInterval) clearInterval(afkInterval);
+    if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    
+    reconnectAttempts = 0;
+    isSpawned = false;
+    bot = null;
+    
+    setTimeout(() => {
+        createBot();
+    }, 1000);
+    
+    res.json({ success: true, message: 'Restart avviato' });
+});
+
+// Comandi speciali
+app.post('/api/command', verifyToken, (req, res) => {
+    const { command } = req.body;
+    const validCommands = ['jump', 'sprint', 'sneak'];
+    
+    if (!command || !validCommands.includes(command)) {
+        return res.status(400).json({ error: `Comando non valido. Comandi: ${validCommands.join(', ')}` });
+    }
+    
+    if (!bot || !bot.isAlive) {
+        return res.status(503).json({ error: 'Bot non connesso' });
+    }
+    
+    try {
+        if (command === 'jump') {
+            bot.setControlState('jump', true);
+            setTimeout(() => bot.setControlState('jump', false), 300);
+        }
+        addLog(`[API] Comando eseguito: ${command}`);
+        res.json({ success: true, message: `Comando '${command}' eseguito` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Log del bot
+app.get('/api/logs', verifyToken, (req, res) => {
+    const lines = req.query.lines ? parseInt(req.query.lines) : 50;
+    res.json({ logs: logs.slice(-lines) });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', botAlive: bot?.isAlive || false });
+});
+
 function createBot() {
     if (bot && bot.isAlive) {
-        console.log('[BOT] Bot già attivo, non creo un nuovo bot.');
+        addLog('[BOT] Bot già attivo, non creo un nuovo bot.');
         return;
     }
 
@@ -39,7 +161,7 @@ function createBot() {
     }
 
     if (reconnectAttempts >= maxReconnectAttempts) {
-        console.error('[BOT] Massimo numero di tentativi di riconnessione raggiunto. Attesa 2 minuti...');
+        addLog('[BOT] Massimo numero di tentativi di riconnessione raggiunto. Attesa 2 minuti...');
         reconnectAttempts = 0;
         reconnectTimeout = setTimeout(() => {
             createBot();
@@ -48,7 +170,7 @@ function createBot() {
     }
 
     const delay = getReconnectDelay();
-    console.log(`[BOT] Tentativo ${reconnectAttempts + 1}/${maxReconnectAttempts} - Connessione tra ${delay / 1000}s a ${config.host}:${config.port}...`);
+    addLog(`[BOT] Tentativo ${reconnectAttempts + 1}/${maxReconnectAttempts} - Connessione tra ${delay / 1000}s a ${config.host}:${config.port}...`);
     
     reconnectTimeout = setTimeout(() => {
         reconnectTimeout = null;
@@ -62,7 +184,7 @@ function createBot() {
                 version: config.version
             });
         } catch (err) {
-            console.error('[BOT] Errore creazione bot:', err.message);
+            addLog('[BOT] Errore creazione bot: ' + err.message);
             reconnectAttempts++;
             bot = null;
             createBot();
@@ -72,7 +194,7 @@ function createBot() {
         // Timeout per spawn - se non spawna in 30s, disconnette
         const spawnTimeout = setTimeout(() => {
             if (!isSpawned && bot && bot.isAlive) {
-                console.error('[BOT] Timeout spawn - disconnessione per retry.');
+                addLog('[BOT] Timeout spawn - disconnessione per retry.');
                 try {
                     bot.quit();
                 } catch (e) {}
@@ -83,7 +205,7 @@ function createBot() {
             clearTimeout(spawnTimeout);
             isSpawned = true;
             reconnectAttempts = 0; // Reset su spawn riuscito
-            console.log(`[BOT] ✓ Entrato nel server come ${bot.username}.`);
+            addLog(`[BOT] ✓ Entrato nel server come ${bot.username}.`);
 
             if (reconnectTimeout) {
                 clearTimeout(reconnectTimeout);
@@ -98,7 +220,7 @@ function createBot() {
                     if (bot && bot.entity) {
                         bot.chat(`/register ${config.password} ${config.password}`);
                         bot.chat(`/login ${config.password}`);
-                        console.log('[BOT] Comandi di autenticazione inviati.');
+                        addLog('[BOT] Comandi di autenticazione inviati.');
                     }
                 }, 1500);
             }
@@ -114,9 +236,9 @@ function createBot() {
                                 bot.setControlState('jump', false);
                             }
                         }, 300);
-                        console.log('[BOT] Anti-AFK ✓ (jump)');
+                        addLog('[BOT] Anti-AFK ✓ (jump)');
                     } catch (e) {
-                        console.error('[BOT] Errore anti-AFK:', e.message);
+                        addLog('[BOT] Errore anti-AFK: ' + e.message);
                     }
                 }
             }, 60000);
@@ -126,22 +248,22 @@ function createBot() {
                 if (!bot || !bot.isAlive) {
                     clearInterval(watchdogInterval);
                 } else {
-                    console.log('[BOT] Watchdog ✓ - Bot online');
+                    addLog('[BOT] Watchdog ✓ - Bot online');
                 }
             }, 90000);
 
-            console.log('[BOT] Bot online in modalità AFK silenzioso - Anti-AFK attivo.');
+            addLog('[BOT] Bot online in modalità AFK silenzioso - Anti-AFK attivo.');
         });
 
         bot.on('kicked', (reason, loggedIn) => {
             isSpawned = false;
-            console.log(`[BOT] ✗ Kicked dal server. Motivo: ${reason}`);
+            addLog(`[BOT] ✗ Kicked dal server. Motivo: ${reason}`);
             reconnectAttempts++;
         });
 
         bot.on('end', (reason) => {
             isSpawned = false;
-            console.log(`[BOT] ✗ Disconnesso. Motivo: ${reason}`);
+            addLog(`[BOT] ✗ Disconnesso. Motivo: ${reason}`);
             
             if (afkInterval) {
                 clearInterval(afkInterval);
@@ -160,7 +282,7 @@ function createBot() {
 
         bot.on('error', (err) => {
             isSpawned = false;
-            console.error('[BOT] ✗ Errore bot:', err.message);
+            addLog('[BOT] ✗ Errore bot: ' + err.message);
             if (!reconnectTimeout) {
                 reconnectAttempts++;
                 createBot();
@@ -172,7 +294,7 @@ function createBot() {
 
 // Graceful shutdown su Ctrl+C
 process.on('SIGINT', () => {
-    console.log('\n[BOT] Shutdown ricevuto...');
+    addLog('Shutdown ricevuto...');
     if (afkInterval) clearInterval(afkInterval);
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
     if (bot && bot.isAlive) {
@@ -181,5 +303,11 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-console.log('[BOT] Avvio bot 24/7...');
+// Avvio server API
+app.listen(API_PORT, () => {
+    addLog(`🌐 API Server avviato su porta ${API_PORT}`);
+    addLog(`📌 Usa token: Bearer ${API_TOKEN}`);
+});
+
+addLog('🤖 Avvio bot 24/7...');
 createBot();

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Controllo Remoto Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .config-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status-box {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .status-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .status-value {
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .status-value.online {
+            color: #4caf50;
+        }
+        
+        .status-value.offline {
+            color: #f44336;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            grid-column: span 2;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #efefef;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #45a049;
+        }
+        
+        .message-section {
+            margin-bottom: 20px;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+        }
+        
+        .chat-input button {
+            width: 100px;
+        }
+        
+        .logs-box {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 3px;
+            word-break: break-all;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .message.show {
+            display: block;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 5px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 FuocoBot Control Panel</h1>
+        <div class="subtitle">Controllo remoto via API HTTP</div>
+        
+        <div class="config-section">
+            <div class="form-group">
+                <label for="apiUrl">URL API (es: https://tuo-bot.railway.app)</label>
+                <input type="text" id="apiUrl" placeholder="https://tuo-bot.railway.app" value="http://localhost:3000">
+            </div>
+            <div class="form-group">
+                <label for="apiToken">API Token</label>
+                <input type="password" id="apiToken" placeholder="Inserisci il tuo token API">
+            </div>
+            <button class="btn-primary" onclick="loadStatus()">
+                <span id="statusSpinner"></span>
+                Connetti & Aggiorna Status
+            </button>
+        </div>
+        
+        <div id="message" class="message"></div>
+        
+        <div class="status-box">
+            <div class="status-item">
+                <span class="status-label">🔌 Connessione:</span>
+                <span class="status-value" id="statusConnected">Caricamento...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">👤 Username:</span>
+                <span class="status-value" id="statusUsername">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">❤️ Salute:</span>
+                <span class="status-value" id="statusHealth">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">🍖 Fame:</span>
+                <span class="status-value" id="statusHunger">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">🌍 Dimensione:</span>
+                <span class="status-value" id="statusDimension">-</span>
+            </div>
+        </div>
+        
+        <div class="message-section">
+            <label for="chatMessage">💬 Invia Messaggio</label>
+            <div class="chat-input">
+                <input type="text" id="chatMessage" placeholder="Scrivi un messaggio..." onkeypress="if(event.key==='Enter') sendChat()">
+                <button class="btn-success" onclick="sendChat()">Invia</button>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-secondary" onclick="executeCommand('jump')">⬆️ Jump</button>
+            <button class="btn-secondary" onclick="executeCommand('sprint')">💨 Sprint</button>
+            <button class="btn-secondary" onclick="executeCommand('sneak')">🤐 Sneak</button>
+            <button class="btn-danger" onclick="restartBot()">🔄 Restart Bot</button>
+        </div>
+        
+        <label>📋 Log (ultimi 20)</label>
+        <div class="logs-box" id="logsBox">
+            <div class="log-entry">In attesa di logs...</div>
+        </div>
+        
+        <button class="btn-secondary" style="width: 100%;" onclick="refreshLogs()">🔄 Aggiorna Log</button>
+    </div>
+
+    <script>
+        function showMessage(text, type = 'info') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = text;
+            msgEl.className = `message show ${type}`;
+            setTimeout(() => {
+                msgEl.classList.remove('show');
+            }, 5000);
+        }
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const apiUrl = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+            const apiToken = document.getElementById('apiToken').value;
+
+            if (!apiUrl) {
+                showMessage('❌ Inserisci l\'URL API', 'error');
+                return null;
+            }
+            if (!apiToken) {
+                showMessage('❌ Inserisci il token API', 'error');
+                return null;
+            }
+
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Authorization': `Bearer ${apiToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (body) options.body = JSON.stringify(body);
+
+                const response = await fetch(`${apiUrl}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        showMessage('❌ Token non valido!', 'error');
+                    } else if (response.status === 503) {
+                        showMessage('❌ Bot non connesso!', 'error');
+                    } else {
+                        showMessage(`❌ Errore ${response.status}`, 'error');
+                    }
+                    return null;
+                }
+
+                return await response.json();
+            } catch (err) {
+                showMessage(`❌ Errore connessione: ${err.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function loadStatus() {
+            const data = await apiCall('/api/status');
+            if (!data) return;
+
+            const connected = data.connected;
+            document.getElementById('statusConnected').textContent = connected ? '✅ Online' : '❌ Offline';
+            document.getElementById('statusConnected').className = `status-value ${connected ? 'online' : 'offline'}`;
+            document.getElementById('statusUsername').textContent = data.username || '-';
+            document.getElementById('statusHealth').textContent = `${data.health}/20`;
+            document.getElementById('statusHunger').textContent = `${data.hunger}/20`;
+            document.getElementById('statusDimension').textContent = data.dimension || '-';
+
+            showMessage('✅ Status aggiornato', 'success');
+            refreshLogs();
+        }
+
+        async function sendChat() {
+            const message = document.getElementById('chatMessage').value.trim();
+            if (!message) {
+                showMessage('❌ Scrivi un messaggio!', 'error');
+                return;
+            }
+
+            const data = await apiCall('/api/chat', 'POST', { message });
+            if (data?.success) {
+                showMessage(`✅ Messaggio inviato: "${message}"`, 'success');
+                document.getElementById('chatMessage').value = '';
+            }
+        }
+
+        async function executeCommand(command) {
+            const data = await apiCall('/api/command', 'POST', { command });
+            if (data?.success) {
+                showMessage(`✅ Comando eseguito: ${command}`, 'success');
+            }
+        }
+
+        async function restartBot() {
+            if (!confirm('Sei sicuro di voler riavviare il bot?')) return;
+            
+            const data = await apiCall('/api/restart', 'POST');
+            if (data?.success) {
+                showMessage('✅ Restart avviato...', 'success');
+                setTimeout(loadStatus, 3000);
+            }
+        }
+
+        async function refreshLogs() {
+            const data = await apiCall('/api/logs?lines=20');
+            if (!data?.logs) return;
+
+            const logsBox = document.getElementById('logsBox');
+            logsBox.innerHTML = data.logs
+                .map(log => `<div class="log-entry">${escapeHtml(log)}</div>`)
+                .join('');
+            logsBox.scrollTop = logsBox.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-refresh ogni 10 secondi
+        setInterval(loadStatus, 10000);
+    </script>
+</body>
+</html>
